@@ -22,6 +22,15 @@
 extern "C" {
 #endif
 
+#if defined(__linux__) || defined(__APPLE__)
+#define _GNU_SOURCE
+#include <stdio.h>
+#include "linux/MQTTLinux.h"
+#else
+#include <stdio.h>
+#include "FreeRTOS/MQTTFreeRTOS.h"
+#endif
+
 #if defined(WIN32_DLL) || defined(WIN64_DLL)
 #define DLLImport __declspec(dllimport)
 #define DLLExport __declspec(dllexport)

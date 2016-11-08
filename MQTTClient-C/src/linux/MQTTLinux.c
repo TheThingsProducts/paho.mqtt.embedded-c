@@ -199,7 +199,7 @@ int ConditionDestroy(Condition *condition)
 int ThreadStart(Thread *thread, void (*fn)(void *), void *arg)
 {
    int rc = pthread_create(&thread->t, NULL, (void *)fn, arg);
-   thread->started = rc == 0 ? 1 : 0;
+   thread->started = rc == 0;
    return rc;
 }
 
