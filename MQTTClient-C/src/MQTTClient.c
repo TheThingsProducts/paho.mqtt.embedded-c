@@ -75,9 +75,7 @@ void MQTTClientInit(MQTTClient *c, Network *network, unsigned int command_timeou
    c->next_packetid = 1;
    TimerInit(&c->ping_timer);
 #if defined(MQTT_TASK)
-   MutexInit(&c->reply_mutex);
-   ConditionInit(&c->has_reply);
-   MutexInit(&c->write_mutex);
+   QueueInit(&c->reply);
 #endif
 }
 
@@ -85,9 +83,7 @@ void MQTTClientDestroy(MQTTClient *c)
 {
 #if defined(MQTT_TASK)
    ThreadJoin(&c->read_thread);
-   MutexDestroy(&c->write_mutex);
-   ConditionDestroy(&c->has_reply);
-   MutexDestroy(&c->reply_mutex);
+   QueueDestroy(&c->reply);
 #endif
 }
 
@@ -181,7 +177,7 @@ int deliverMessage(MQTTClient *c, MQTTString *topicName, MQTTMessage *message)
    for (i = 0; i < MAX_MESSAGE_HANDLERS; ++i)
    {
       if (c->messageHandlers[i].topicFilter != NULL && (MQTTPacket_equals(topicName, (char *)c->messageHandlers[i].topicFilter) ||
-                                                     isTopicMatched((char *)c->messageHandlers[i].topicFilter, topicName)))
+                                                        isTopicMatched((char *)c->messageHandlers[i].topicFilter, topicName)))
       {
          if (c->messageHandlers[i].fp != NULL)
          {
@@ -363,16 +359,11 @@ void MQTTRead(void *arg)
          case PUBACK:
          case SUBACK:
          case PUBCOMP:
-            MutexLock(&c->reply_mutex);
-            while (c->reply != 0)
-               ConditionWait(&c->has_reply, &c->reply_mutex);
-            c->reply = packet_type;
-            MutexUnlock(&c->reply_mutex);
-            ConditionSignal(&c->has_reply);
+            Enqueue(&c->reply, packet_type);
             break;
          }
-         break;
       }
+      break;
       }
 
       keepalive(c);
@@ -389,6 +380,14 @@ int waitfor(MQTTClient *c, unsigned short packet_type, Timer *timer)
 {
    int rc = FAILURE;
 
+#if defined(MQTT_TASK)
+   unsigned short reply;
+   do
+   {
+      rc = Dequeue(&c->reply, &reply, timer);
+   } while (rc == 0 && reply != packet_type);
+   return rc == 0 ? reply : rc;
+#else
    do
    {
       if (TimerIsExpired(timer))
@@ -396,20 +395,9 @@ int waitfor(MQTTClient *c, unsigned short packet_type, Timer *timer)
          rc = FAILURE;
          break;
       }
-#if defined(MQTT_TASK)
-      MutexLock(&c->reply_mutex);
-      while (c->reply == 0)
-         ConditionWait(&c->has_reply, &c->reply_mutex);
-      rc = c->reply;
-      c->reply = 0;
-      MutexUnlock(&c->reply_mutex);
-      ConditionSignal(&c->has_reply);
-   } while (rc != packet_type);
-#else
    } while ((rc = cycle(c, timer)) != packet_type);
-#endif
-
    return rc;
+#endif
 }
 
 int MQTTConnect(MQTTClient *c, MQTTPacket_connectData *options)

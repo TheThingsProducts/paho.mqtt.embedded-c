@@ -186,6 +186,20 @@ int ConditionWait(Condition *condition, Mutex *mutex)
    return pthread_cond_wait(&condition->c, &mutex->m);
 }
 
+int ConditionTimedWait(Condition *condition, Mutex *mutex, Timer *timer)
+{
+   struct timespec ts;
+   ts.tv_sec = timer->end_time.tv_sec;
+   ts.tv_nsec = timer->end_time.tv_usec * 1000;
+
+   int rc = pthread_cond_timedwait(&condition->c, &mutex->m, &ts);
+   if (rc == ETIMEDOUT)
+      return TIMEOUT;
+   if (rc != 0)
+      return FAILURE;
+   return 0;
+}
+
 int ConditionSignal(Condition *condition)
 {
    return pthread_cond_signal(&condition->c);
@@ -194,6 +208,46 @@ int ConditionSignal(Condition *condition)
 int ConditionDestroy(Condition *condition)
 {
    return pthread_cond_destroy(&condition->c);
+}
+
+void QueueInit(Queue *queue)
+{
+   MutexInit(&queue->m);
+   ConditionInit(&queue->c);
+}
+
+int QueueDestroy(Queue *queue)
+{
+   MutexDestroy(&queue->m);
+   ConditionDestroy(&queue->c);
+   return 0;
+}
+
+int Enqueue(Queue *queue, unsigned short item)
+{
+   MutexLock(&queue->m);
+   while (queue->item != 0)
+      ConditionWait(&queue->c, &queue->m);
+   queue->item = item;
+   MutexUnlock(&queue->m);
+   ConditionSignal(&queue->c);
+   return 0;
+}
+
+int Dequeue(Queue *queue, unsigned short *item, Timer *timer)
+{
+   MutexLock(&queue->m);
+   int rc = 0;
+   while (rc == 0 && queue->item == 0)
+      rc = ConditionTimedWait(&queue->c, &queue->m, timer);
+   if (rc == 0)
+   {
+      *item = queue->item;
+      queue->item = 0;
+   }
+   MutexUnlock(&queue->m);
+   ConditionSignal(&queue->c);
+   return rc;
 }
 
 int ThreadStart(Thread *thread, void (*fn)(void *), void *arg)

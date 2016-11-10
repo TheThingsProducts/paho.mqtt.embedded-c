@@ -26,9 +26,9 @@ extern "C" {
 #define _GNU_SOURCE
 #include <stdio.h>
 #include "linux/MQTTLinux.h"
-#else
+#elif defined(__harmony__)
 #include <stdio.h>
-#include "FreeRTOS/MQTTFreeRTOS.h"
+#include "Harmony/MQTTHarmony.h"
 #endif
 
 #if defined(WIN32_DLL) || defined(WIN64_DLL)
@@ -111,9 +111,7 @@ typedef struct MQTTClient
    Timer ping_timer;
 #if defined(MQTT_TASK)
    Thread read_thread;
-   unsigned short reply;
-   Mutex reply_mutex;
-   Condition has_reply;
+   Queue reply;
    Mutex write_mutex;
 #endif
 } MQTTClient;

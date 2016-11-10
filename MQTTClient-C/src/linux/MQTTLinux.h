@@ -91,8 +91,21 @@ typedef struct Condition
 
 void ConditionInit(Condition *);
 int ConditionWait(Condition *, Mutex *);
+int ConditionTimedWait(Condition *, Mutex *, Timer *);
 int ConditionSignal(Condition *);
 int ConditionDestroy(Condition *);
+
+typedef struct Queue
+{
+   unsigned short item;
+   Condition c;
+   Mutex m;
+} Queue;
+
+void QueueInit(Queue *);
+int Enqueue(Queue *, unsigned short);
+int Dequeue(Queue *, unsigned short *, Timer *);
+int QueueDestroy(Queue *);
 
 typedef struct Thread
 {
