@@ -18,180 +18,151 @@
 
 #include "MQTTHarmony.h"
 
-void MutexInit(Mutex *mutex)
-{
-   mutex->sem = xSemaphoreCreateMutex();
+void MutexInit(Mutex *mutex) {
+    mutex->sem = xSemaphoreCreateMutex();
 }
 
-int MutexLock(Mutex *mutex)
-{
-   return xSemaphoreTake(mutex->sem, portMAX_DELAY);
+int MutexLock(Mutex *mutex) {
+    return xSemaphoreTake(mutex->sem, portMAX_DELAY);
 }
 
-int MutexUnlock(Mutex *mutex)
-{
-   return xSemaphoreGive(mutex->sem);
+int MutexUnlock(Mutex *mutex) {
+    return xSemaphoreGive(mutex->sem);
 }
 
-int MutexDestroy(Mutex *mutex)
-{
-   vSemaphoreDelete(mutex->sem);
-   return 0;
+int MutexDestroy(Mutex *mutex) {
+    vSemaphoreDelete(mutex->sem);
+    return 0;
 }
 
-void TimerCountdownMS(Timer *timer, unsigned int timeout_ms)
-{
-   timer->xTicksToWait = timeout_ms / portTICK_PERIOD_MS; /* convert milliseconds to ticks */
-   vTaskSetTimeOutState(&timer->xTimeOut);                /* Record the time at which this function was entered. */
+void TimerCountdownMS(Timer *timer, unsigned int timeout_ms) {
+    timer->xTicksToWait = timeout_ms / portTICK_PERIOD_MS; /* convert milliseconds to ticks */
+    vTaskSetTimeOutState(&timer->xTimeOut); /* Record the time at which this function was entered. */
 }
 
-void TimerCountdown(Timer *timer, unsigned int timeout)
-{
-   TimerCountdownMS(timer, timeout * 1000);
+void TimerCountdown(Timer *timer, unsigned int timeout) {
+    TimerCountdownMS(timer, timeout * 1000);
 }
 
-int TimerLeftMS(Timer *timer)
-{
-   xTaskCheckForTimeOut(&timer->xTimeOut, &timer->xTicksToWait); /* updates xTicksToWait to the number left */
-   return (timer->xTicksToWait < 0) ? 0 : (timer->xTicksToWait * portTICK_PERIOD_MS);
+int TimerLeftMS(Timer *timer) {
+    xTaskCheckForTimeOut(&timer->xTimeOut, &timer->xTicksToWait); /* updates xTicksToWait to the number left */
+    return (timer->xTicksToWait < 0) ? 0 : (timer->xTicksToWait * portTICK_PERIOD_MS);
 }
 
-char TimerIsExpired(Timer *timer)
-{
-   return xTaskCheckForTimeOut(&timer->xTimeOut, &timer->xTicksToWait) == pdTRUE;
+char TimerIsExpired(Timer *timer) {
+    return xTaskCheckForTimeOut(&timer->xTimeOut, &timer->xTicksToWait) == pdTRUE;
 }
 
-void TimerInit(Timer *timer)
-{
-   timer->xTicksToWait = 0;
-   memset(&timer->xTimeOut, '\0', sizeof(timer->xTimeOut));
+void TimerInit(Timer *timer) {
+    timer->xTicksToWait = 0;
+    memset(&timer->xTimeOut, '\0', sizeof (timer->xTimeOut));
 }
 
-int Harmony_read(Network *n, unsigned char *buffer, int len, int timeout_ms)
-{
-   TickType_t xTicksToWait = timeout_ms / portTICK_PERIOD_MS; /* convert milliseconds to ticks */
-   TimeOut_t xTimeOut;
-   int recvLen = 0;
+int Harmony_read(Network *n, unsigned char *buffer, int len, int timeout_ms) {
+    TickType_t xTicksToWait = timeout_ms / portTICK_PERIOD_MS; /* convert milliseconds to ticks */
+    TimeOut_t xTimeOut;
+    int recvLen = 0;
 
-   vTaskSetTimeOutState(&xTimeOut); /* Record the time at which this function was entered. */
-   do
-   {
-      int rc = 0;
+    vTaskSetTimeOutState(&xTimeOut); /* Record the time at which this function was entered. */
+    do {
+        int rc = TCPIP_TCP_ArrayGet(n->my_socket, buffer + recvLen, len - recvLen);
+        if (rc > 0)
+            recvLen += rc;
+        else if (rc == 0) {
+            recvLen = 0;
+            break;
+        }
+        else if (rc < 0) {
+            recvLen = rc;
+            break;
+        }
+    } while (recvLen < len && xTaskCheckForTimeOut(&xTimeOut, &xTicksToWait) == pdFALSE);
 
-      //		FreeRTOS_setsockopt(n->my_socket, 0, FREERTOS_SO_RCVTIMEO, &xTicksToWait, sizeof(xTicksToWait));
-      //		rc = FreeRTOS_recv(n->my_socket, buffer + recvLen, len - recvLen, 0);
-      if (rc > 0)
-         recvLen += rc;
-      else if (rc < 0)
-      {
-         recvLen = rc;
-         break;
-      }
-   } while (recvLen < len && xTaskCheckForTimeOut(&xTimeOut, &xTicksToWait) == pdFALSE);
-
-   return recvLen;
+    return recvLen;
 }
 
-int Harmony_write(Network *n, unsigned char *buffer, int len, int timeout_ms)
-{
-   TickType_t xTicksToWait = timeout_ms / portTICK_PERIOD_MS; /* convert milliseconds to ticks */
-   TimeOut_t xTimeOut;
-   int sentLen = 0;
+int Harmony_write(Network *n, unsigned char *buffer, int len, int timeout_ms) {
+    TickType_t xTicksToWait = timeout_ms / portTICK_PERIOD_MS; /* convert milliseconds to ticks */
+    TimeOut_t xTimeOut;
+    int sentLen = 0;
 
-   vTaskSetTimeOutState(&xTimeOut); /* Record the time at which this function was entered. */
-   do
-   {
-      int rc = 0;
+    vTaskSetTimeOutState(&xTimeOut); /* Record the time at which this function was entered. */
+    do {
+        int rc = TCPIP_TCP_ArrayPut(n->my_socket, buffer + sentLen, len - sentLen);
+        if (rc > 0)
+            sentLen += rc;
+        else if (rc == 0) {
+            sentLen = 0;
+            break;
+        } else if (rc < 0) {
+            sentLen = rc;
+            break;
+        }
+    } while (sentLen < len && xTaskCheckForTimeOut(&xTimeOut, &xTicksToWait) == pdFALSE);
 
-      int available = TCPIP_TCP_PutIsReady(n->my_socket);
-      
-      
-      sentLen += TCPIP_TCP_ArrayPut(n->my_socket, );
-      
-      //		FreeRTOS_setsockopt(n->my_socket, 0, FREERTOS_SO_RCVTIMEO, &xTicksToWait, sizeof(xTicksToWait));
-      //		rc = FreeRTOS_send(n->my_socket, buffer + sentLen, len - sentLen, 0);
-      if (rc > 0)
-         sentLen += rc;
-      else if (rc < 0)
-      {
-         sentLen = rc;
-         break;
-      }
-   } while (sentLen < len && xTaskCheckForTimeOut(&xTimeOut, &xTicksToWait) == pdFALSE);
-
-   return sentLen;
+    return sentLen;
 }
 
-void NetworkInit(Network *n)
-{
-   n->my_socket = NULL;
-   n->mqttread = &Harmony_read;
-   n->mqttwrite = &Harmony_write;
+void NetworkInit(Network *n) {
+    n->my_socket = NULL;
+    n->mqttread = &Harmony_read;
+    n->mqttwrite = &Harmony_write;
 }
 
-int NetworkConnect(Network *n, char *addr, int port)
-{
-   IP_MULTI_ADDRESS remoteAddress;
-   if (strlen(addr) == 0)
-      return -1;
+int NetworkConnect(Network *n, char *addr, int port) {
+    IP_MULTI_ADDRESS remoteAddress;
+    if (strlen(addr) == 0)
+        return -1;
 
-   if (!TCPIP_Helper_StringToIPAddress(addr, &remoteAddress.v4Add))
-      return -1;
+    if (!TCPIP_Helper_StringToIPAddress(addr, &remoteAddress.v4Add))
+        return -1;
 
-   n->my_socket = TCPIP_TCP_ClientOpen(IP_ADDRESS_TYPE_IPV4, port, &remoteAddress);
-   if (n->my_socket == INVALID_SOCKET)
-      return INVALID_SOCKET;
+    n->my_socket = TCPIP_TCP_ClientOpen(IP_ADDRESS_TYPE_IPV4, port, &remoteAddress);
+    if (n->my_socket == INVALID_SOCKET)
+        return INVALID_SOCKET;
 
-   return 0;
+    return 0;
 }
 
-void NetworkDisconnect(Network *n)
-{
-   TCPIP_TCP_Disconnect(n->my_socket);
+void NetworkDisconnect(Network *n) {
+    TCPIP_TCP_Disconnect(n->my_socket);
 }
 
-int ThreadStart(Thread *thread, void (*fn)(void *), void *arg)
-{
-   uint16_t usTaskStackSize = (configMINIMAL_STACK_SIZE * 5);
-   UBaseType_t uxTaskPriority = uxTaskPriorityGet(NULL); /* set the priority as the same as the calling task*/
+int ThreadStart(Thread *thread, void (*fn)(void *), void *arg) {
+    uint16_t usTaskStackSize = (configMINIMAL_STACK_SIZE * 5);
+    UBaseType_t uxTaskPriority = uxTaskPriorityGet(NULL); /* set the priority as the same as the calling task*/
 
-   return xTaskCreate(fn,              /* The function that implements the task. */
-                      "MQTTTask",      /* Just a text name for the task to aid debugging. */
-                      usTaskStackSize, /* The stack size is defined in FreeRTOSIPConfig.h. */
-                      arg,             /* The task parameter, not used in this case. */
-                      uxTaskPriority,  /* The priority assigned to the task is defined in FreeRTOSConfig.h. */
-                      &thread->task);  /* The task handle is not used. */
+    return xTaskCreate(fn, /* The function that implements the task. */
+            "MQTTTask", /* Just a text name for the task to aid debugging. */
+            usTaskStackSize, /* The stack size is defined in FreeRTOSIPConfig.h. */
+            arg, /* The task parameter, not used in this case. */
+            uxTaskPriority, /* The priority assigned to the task is defined in FreeRTOSConfig.h. */
+            &thread->task); /* The task handle is not used. */
 }
 
-int ThreadJoin(Thread *thread)
-{
+int ThreadJoin(Thread *thread) {
     vTaskDelete(thread->task);
     return SUCCESS;
 }
 
-void ThreadExit()
-{
+void ThreadExit() {
     vTaskDelete(NULL);
 }
 
-void QueueCreate(Queue *q)
-{
-    q->queue = xQueueCreate(1, sizeof(unsigned short));
+void QueueInit(Queue *q) {
+    q->queue = xQueueCreate(1, sizeof (unsigned short));
 }
 
-int Enqueue(Queue *q, unsigned short item)
-{
+int Enqueue(Queue *q, unsigned short item) {
     return xQueueSend(q->queue, &item, 0U) == pdTRUE ? SUCCESS : FAILURE;
 }
 
-int Dequeue(Queue *q, unsigned short *item, Timer *timer)
-{
-   xTaskCheckForTimeOut(&timer->xTimeOut, &timer->xTicksToWait);
-   return xQueueReceive(q->queue, item, timer->xTicksToWait) == pdTRUE ? SUCCESS : TIMEOUT;
+int Dequeue(Queue *q, unsigned short *item, Timer *timer) {
+    xTaskCheckForTimeOut(&timer->xTimeOut, &timer->xTicksToWait);
+    return xQueueReceive(q->queue, item, timer->xTicksToWait) == pdTRUE ? SUCCESS : TIMEOUT;
 }
 
-int QueueDestroy(Queue *q)
-{
+int QueueDestroy(Queue *q) {
     vQueueDelete(q->queue);
     return SUCCESS;
 }

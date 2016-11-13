@@ -13,7 +13,7 @@
  * Contributors:
  *    Allan Stockdill-Mander - initial API and implementation and/or initial documentation
  *    Johan Stokking - convert to Microchip Harmony
-*******************************************************************************/
+ *******************************************************************************/
 
 #if !defined(MQTTHarmony_H)
 #define MQTTHarmony_H
@@ -26,10 +26,9 @@
 
 #include "../MQTTErrors.h"
 
-typedef struct Timer
-{
-   TickType_t xTicksToWait;
-   TimeOut_t xTimeOut;
+typedef struct Timer {
+    TickType_t xTicksToWait;
+    TimeOut_t xTimeOut;
 } Timer;
 
 void TimerInit(Timer *);
@@ -38,9 +37,8 @@ void TimerCountdownMS(Timer *, unsigned int);
 void TimerCountdown(Timer *, unsigned int);
 int TimerLeftMS(Timer *);
 
-typedef struct Mutex
-{
-   SemaphoreHandle_t sem;
+typedef struct Mutex {
+    SemaphoreHandle_t sem;
 } Mutex;
 
 void MutexInit(Mutex *);
@@ -48,20 +46,18 @@ int MutexLock(Mutex *);
 int MutexUnlock(Mutex *);
 int MutexDestroy(Mutex *);
 
-typedef struct Network
-{
-   TCP_SOCKET my_socket;
-   int (*mqttread)(struct Network *, unsigned char *, int, int);
-   int (*mqttwrite)(struct Network *, unsigned char *, int, int);
+typedef struct Network {
+    TCP_SOCKET my_socket;
+    int (*mqttread)(struct Network *, unsigned char *, int, int);
+    int (*mqttwrite)(struct Network *, unsigned char *, int, int);
 } Network;
 
 void NetworkInit(Network *);
 int NetworkConnect(Network *, char *, int);
 void NetworkDisconnect(Network *);
 
-typedef struct Queue
-{
-   QueueHandle_t queue;
+typedef struct Queue {
+    QueueHandle_t queue;
 } Queue;
 
 void QueueInit(Queue *);
@@ -69,9 +65,8 @@ int Enqueue(Queue *, unsigned short);
 int Dequeue(Queue *, unsigned short *, Timer *);
 int QueueDestroy(Queue *);
 
-typedef struct Thread
-{
-   TaskHandle_t task;
+typedef struct Thread {
+    TaskHandle_t task;
 } Thread;
 
 int ThreadStart(Thread *, void (*fn)(void *), void *arg);
