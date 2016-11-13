@@ -18,19 +18,6 @@
 
 #include "MQTTHarmony.h"
 
-int ThreadStart(Thread *thread, void (*fn)(void *), void *arg)
-{
-   uint16_t usTaskStackSize = (configMINIMAL_STACK_SIZE * 5);
-   UBaseType_t uxTaskPriority = uxTaskPriorityGet(NULL); /* set the priority as the same as the calling task*/
-
-   return xTaskCreate(fn,              /* The function that implements the task. */
-                      "MQTTTask",      /* Just a text name for the task to aid debugging. */
-                      usTaskStackSize, /* The stack size is defined in FreeRTOSIPConfig.h. */
-                      arg,             /* The task parameter, not used in this case. */
-                      uxTaskPriority,  /* The priority assigned to the task is defined in FreeRTOSConfig.h. */
-                      &thread->task);  /* The task handle is not used. */
-}
-
 void MutexInit(Mutex *mutex)
 {
    mutex->sem = xSemaphoreCreateMutex();
@@ -116,6 +103,11 @@ int Harmony_write(Network *n, unsigned char *buffer, int len, int timeout_ms)
    {
       int rc = 0;
 
+      int available = TCPIP_TCP_PutIsReady(n->my_socket);
+      
+      
+      sentLen += TCPIP_TCP_ArrayPut(n->my_socket, );
+      
       //		FreeRTOS_setsockopt(n->my_socket, 0, FREERTOS_SO_RCVTIMEO, &xTicksToWait, sizeof(xTicksToWait));
       //		rc = FreeRTOS_send(n->my_socket, buffer + sentLen, len - sentLen, 0);
       if (rc > 0)
@@ -156,4 +148,50 @@ int NetworkConnect(Network *n, char *addr, int port)
 void NetworkDisconnect(Network *n)
 {
    TCPIP_TCP_Disconnect(n->my_socket);
+}
+
+int ThreadStart(Thread *thread, void (*fn)(void *), void *arg)
+{
+   uint16_t usTaskStackSize = (configMINIMAL_STACK_SIZE * 5);
+   UBaseType_t uxTaskPriority = uxTaskPriorityGet(NULL); /* set the priority as the same as the calling task*/
+
+   return xTaskCreate(fn,              /* The function that implements the task. */
+                      "MQTTTask",      /* Just a text name for the task to aid debugging. */
+                      usTaskStackSize, /* The stack size is defined in FreeRTOSIPConfig.h. */
+                      arg,             /* The task parameter, not used in this case. */
+                      uxTaskPriority,  /* The priority assigned to the task is defined in FreeRTOSConfig.h. */
+                      &thread->task);  /* The task handle is not used. */
+}
+
+int ThreadJoin(Thread *thread)
+{
+    vTaskDelete(thread->task);
+    return SUCCESS;
+}
+
+void ThreadExit()
+{
+    vTaskDelete(NULL);
+}
+
+void QueueCreate(Queue *q)
+{
+    q->queue = xQueueCreate(1, sizeof(unsigned short));
+}
+
+int Enqueue(Queue *q, unsigned short item)
+{
+    return xQueueSend(q->queue, &item, 0U) == pdTRUE ? SUCCESS : FAILURE;
+}
+
+int Dequeue(Queue *q, unsigned short *item, Timer *timer)
+{
+   xTaskCheckForTimeOut(&timer->xTimeOut, &timer->xTicksToWait);
+   return xQueueReceive(q->queue, item, timer->xTicksToWait) == pdTRUE ? SUCCESS : TIMEOUT;
+}
+
+int QueueDestroy(Queue *q)
+{
+    vQueueDelete(q->queue);
+    return SUCCESS;
 }

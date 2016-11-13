@@ -21,7 +21,10 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "task.h"
+#include "queue.h"
 #include "system_definitions.h"
+
+#include "../MQTTErrors.h"
 
 typedef struct Timer
 {
@@ -45,13 +48,6 @@ int MutexLock(Mutex *);
 int MutexUnlock(Mutex *);
 int MutexDestroy(Mutex *);
 
-typedef struct Thread
-{
-   TaskHandle_t task;
-} Thread;
-
-int ThreadStart(Thread *, void (*fn)(void *), void *arg);
-
 typedef struct Network
 {
    TCP_SOCKET my_socket;
@@ -62,5 +58,24 @@ typedef struct Network
 void NetworkInit(Network *);
 int NetworkConnect(Network *, char *, int);
 void NetworkDisconnect(Network *);
+
+typedef struct Queue
+{
+   QueueHandle_t queue;
+} Queue;
+
+void QueueInit(Queue *);
+int Enqueue(Queue *, unsigned short);
+int Dequeue(Queue *, unsigned short *, Timer *);
+int QueueDestroy(Queue *);
+
+typedef struct Thread
+{
+   TaskHandle_t task;
+} Thread;
+
+int ThreadStart(Thread *, void (*fn)(void *), void *arg);
+int ThreadJoin(Thread *);
+void ThreadExit();
 
 #endif

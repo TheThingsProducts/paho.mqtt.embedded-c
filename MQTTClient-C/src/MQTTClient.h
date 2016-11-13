@@ -42,7 +42,7 @@ extern "C" {
 #define DLLExport
 #endif
 
-#include "MQTTPacket.h"
+#include "../../MQTTPacket/src/MQTTPacket.h"
 #include "MQTTErrors.h"
 #include "stdio.h"
 
