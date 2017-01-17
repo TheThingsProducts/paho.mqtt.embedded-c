@@ -117,15 +117,28 @@ int NetworkConnect(Network *n, char *addr, int port) {
     if (!TCPIP_Helper_StringToIPAddress(addr, &remoteAddress.v4Add))
         return -1;
 
+    SYS_PRINT("Connecting to: %s",addr);
     n->my_socket = TCPIP_TCP_ClientOpen(IP_ADDRESS_TYPE_IPV4, port, &remoteAddress);
     if (n->my_socket == INVALID_SOCKET)
         return INVALID_SOCKET;
-
+/*
+    if (!TCPIP_TCP_IsConnected(n->my_socket))
+    {
+        SYS_CONSOLE_MESSAGE("Error: TCP/IP not connected\r\n");
+        return -1;
+    }
+    if (TCPIP_TCP_PutIsReady(n->my_socket) == 0)
+    {
+        SYS_CONSOLE_MESSAGE("Error: put not ready\r\n");
+        return -1;
+    }
+ * */
     return 0;
 }
 
 void NetworkDisconnect(Network *n) {
     TCPIP_TCP_Disconnect(n->my_socket);
+    TCPIP_TCP_Close(n->my_socket);
 }
 
 int ThreadStart(Thread *thread, void (*fn)(void *), void *arg) {

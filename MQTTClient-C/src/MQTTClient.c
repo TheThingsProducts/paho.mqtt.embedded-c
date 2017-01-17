@@ -75,6 +75,7 @@ void MQTTClientInit(MQTTClient *c, Network *network, unsigned int command_timeou
    c->next_packetid = 1;
    TimerInit(&c->ping_timer);
 #if defined(MQTT_TASK)
+   MutexInit(&c->write_mutex);
    QueueInit(&c->reply);
 #endif
 }
@@ -417,16 +418,17 @@ int MQTTConnect(MQTTClient *c, MQTTPacket_connectData *options)
 
    c->keep_alive_interval = options->keepAliveInterval;
    TimerCountdown(&c->ping_timer, c->keep_alive_interval);
-   int len;
-   if ((len = MQTTSerialize_connect(c->buf, c->buf_size, options)) <= 0)
+   int len  = MQTTSerialize_connect(c->buf, c->buf_size, options);
+   if ((len) <= 0) {
       goto exit;
-   if ((rc = sendPacket(c, len, &connect_timer)) != SUCCESS)
-      goto exit;
-
-   c->isconnected = 1;
+   }
+      c->isconnected = 1;
 #if defined(MQTT_TASK)
    ThreadStart(&c->read_thread, &MQTTRead, c);
 #endif
+   rc = sendPacket(c, len, &connect_timer);
+   if ((rc) != SUCCESS)
+      goto exit;
 
    if (waitfor(c, CONNACK, &connect_timer) == CONNACK)
    {

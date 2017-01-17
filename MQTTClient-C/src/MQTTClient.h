@@ -15,6 +15,8 @@
  *    Ian Craggs - documentation and platform specific header
  *******************************************************************************/
 
+
+
 #if !defined(__MQTT_CLIENT_C_)
 #define __MQTT_CLIENT_C_
 
@@ -43,8 +45,12 @@ extern "C" {
 #endif
 
 #include "../../MQTTPacket/src/MQTTPacket.h"
+    
+    
 #include "MQTTErrors.h"
 #include "stdio.h"
+    
+#include "./Harmony/MQTTHarmony.h"
 
 #if defined(MQTTCLIENT_PLATFORM_HEADER)
 /* The following sequence of macros converts the MQTTCLIENT_PLATFORM_HEADER value
