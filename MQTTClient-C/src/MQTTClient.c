@@ -118,7 +118,10 @@ static int readPacket(MQTTClient *c, Timer *timer)
 {
    int rc = c->ipstack->mqttread(c->ipstack, c->readbuf, 1, TimerLeftMS(timer));
    if (rc != 1)
-      goto exit;
+   {
+       goto exit;
+   }
+      
 
    int rem_len = 0;
 
@@ -234,7 +237,9 @@ int cycle(MQTTClient *c, Timer *timer)
    if (rc < 0)
       return rc;
    if (rc == 0)
+   {
       return FAILURE; // 0 is no more data to read, treat as general failure
+   }
 
    unsigned short packet_type = (unsigned short)rc;
    rc = SUCCESS;
@@ -334,6 +339,7 @@ int MQTTYield(MQTTClient *c, int timeout_ms)
 #if defined(MQTT_TASK)
 void MQTTRead(void *arg)
 {
+   SYS_DEBUG(SYS_ERROR_ERROR, "RQ");
    MQTTClient *c = (MQTTClient *)arg;
 
    Timer timer;
@@ -346,10 +352,14 @@ void MQTTRead(void *arg)
       switch (rc)
       {
       case TIMEOUT:
+          //SYS_DEBUG(SYS_ERROR_ERROR, "RO");
          break;
 
       case FAILURE:
-         goto exit;
+          //
+          SYS_DEBUG(SYS_ERROR_ERROR, "FAIL");
+          break;
+       //  goto exit;
 
       default:
       {
@@ -360,6 +370,7 @@ void MQTTRead(void *arg)
          case PUBACK:
          case SUBACK:
          case PUBCOMP:
+             //SYS_DEBUG(SYS_ERROR_ERROR, "RP");
             Enqueue(&c->reply, packet_type);
             break;
          }
@@ -371,7 +382,7 @@ void MQTTRead(void *arg)
    }
 
 exit:
-   printf("mqtt: read thread exiting\n");
+  // printf("mqtt: read thread exiting\n");
    c->isconnected = 0;
    ThreadExit();
 }

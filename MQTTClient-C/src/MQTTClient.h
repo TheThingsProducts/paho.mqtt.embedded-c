@@ -115,11 +115,11 @@ typedef struct MQTTClient
 
    Network *ipstack;
    Timer ping_timer;
-#if defined(MQTT_TASK)
+//#if defined(MQTT_TASK)
    Thread read_thread;
    Queue reply;
    Mutex write_mutex;
-#endif
+//#endif
 } MQTTClient;
 
 #define DefaultClient                 \

@@ -55,7 +55,9 @@ char TimerIsExpired(Timer *timer) {
 
 void TimerInit(Timer *timer) {
     timer->xTicksToWait = 0;
-    memset(&timer->xTimeOut, '\0', sizeof (timer->xTimeOut));
+    timer->xTimeOut.xOverflowCount = 0;
+    timer->xTimeOut.xTimeOnEntering = 0;
+   // memset(&timer->xTimeOut->xOverflowCount, '\0', sizeof (timer->xTimeOut));
 }
 
 int Harmony_read(Network *n, unsigned char *buffer, int len, int timeout_ms) {
@@ -69,8 +71,9 @@ int Harmony_read(Network *n, unsigned char *buffer, int len, int timeout_ms) {
         if (rc > 0)
             recvLen += rc;
         else if (rc == 0) {
+          //  SYS_DEBUG(SYS_ERROR_ERROR, "RF");
             recvLen = 0;
-            break;
+         //   break;
         }
         else if (rc < 0) {
             recvLen = rc;
@@ -78,6 +81,7 @@ int Harmony_read(Network *n, unsigned char *buffer, int len, int timeout_ms) {
         }
     } while (recvLen < len && xTaskCheckForTimeOut(&xTimeOut, &xTicksToWait) == pdFALSE);
 
+    if(xTaskCheckForTimeOut(&xTimeOut, &xTicksToWait)==pdTRUE) return -3;
     return recvLen;
 }
 
@@ -142,7 +146,7 @@ void NetworkDisconnect(Network *n) {
 }
 
 int ThreadStart(Thread *thread, void (*fn)(void *), void *arg) {
-    uint16_t usTaskStackSize = (configMINIMAL_STACK_SIZE * 5);
+    uint16_t usTaskStackSize = (configMINIMAL_STACK_SIZE * 4);
     UBaseType_t uxTaskPriority = uxTaskPriorityGet(NULL); /* set the priority as the same as the calling task*/
 
     return xTaskCreate(fn, /* The function that implements the task. */
