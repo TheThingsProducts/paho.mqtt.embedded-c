@@ -121,7 +121,7 @@ int NetworkConnect(Network *n, char *addr, int port) {
     if (!TCPIP_Helper_StringToIPAddress(addr, &remoteAddress.v4Add))
         return -1;
 
-    SYS_PRINT("Connecting to: %s",addr);
+    SYS_PRINT("Connecting to: %s\r\n",addr);
     n->my_socket = TCPIP_TCP_ClientOpen(IP_ADDRESS_TYPE_IPV4, port, &remoteAddress);
     if (n->my_socket == INVALID_SOCKET)
         return INVALID_SOCKET;
