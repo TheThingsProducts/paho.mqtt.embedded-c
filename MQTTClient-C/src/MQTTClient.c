@@ -15,6 +15,18 @@
  *******************************************************************************/
 #include "MQTTClient.h"
 
+
+//SYS_TMR_TickCountGet()-rtt_timer = elapsed ticks
+//SYS_TMR_TickCounterFrequencyGet() = ticks per second        
+
+
+uint32_t rtt_timer=0;
+
+#define RTT_TIME_START (rtt_timer = SYS_TMR_TickCountGet())
+#define RTT_TIME_STOP ((float)((float)(SYS_TMR_TickCountGet()-rtt_timer)   /    (float)SYS_TMR_TickCounterFrequencyGet())*1000)
+
+
+
 static void NewMessageData(MessageData *md, MQTTString *aTopicName, MQTTMessage *aMessage)
 {
    md->topicName = aTopicName;
@@ -47,7 +59,6 @@ static int sendPacket(MQTTClient *c, int length, Timer *timer)
 
    if (sent == length)
    {
-      TimerCountdown(&c->ping_timer, c->keep_alive_interval); // record the fact that we have successfully sent the packet
       rc = SUCCESS;
    }
    else
@@ -216,6 +227,8 @@ int keepalive(MQTTClient *c)
 
    if (TimerIsExpired(&c->ping_timer))
    {
+       RTT_TIME_START;
+  //    SYS_CONSOLE_MESSAGE("\r\nSending keep alive ping\r\n");
       if (!c->ping_outstanding)
       {
          Timer timer;
@@ -224,6 +237,7 @@ int keepalive(MQTTClient *c)
          int len = MQTTSerialize_pingreq(c->buf, c->buf_size);
          if (len > 0 && (rc = sendPacket(c, len, &timer)) == SUCCESS) // send the ping packet
             c->ping_outstanding = 1;
+         
       }
    }
 
@@ -303,7 +317,9 @@ int cycle(MQTTClient *c, Timer *timer)
       break;
 
    case PINGRESP:
-      c->ping_outstanding = 0;
+       SYS_CONSOLE_PRINT("\r\nKeep alive resp: %f\r\n",RTT_TIME_STOP);
+       TimerCountdown(&c->ping_timer, c->keep_alive_interval); // record the fact that we have successfully sent the packet  
+       c->ping_outstanding = 0;
       break;
    }
 
