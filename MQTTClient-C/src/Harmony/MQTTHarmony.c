@@ -147,7 +147,7 @@ void NetworkDisconnect(Network *n) {
 
 int ThreadStart(Thread *thread, void (*fn)(void *), void *arg) {
     uint16_t usTaskStackSize = (configMINIMAL_STACK_SIZE * 4);
-    UBaseType_t uxTaskPriority = uxTaskPriorityGet(NULL); /* set the priority as the same as the calling task*/
+    UBaseType_t uxTaskPriority = 1; // Give lowest prio (busy whyle loop) FIXME: centralize prio config uxTaskPriorityGet(NULL); /* set the priority as the same as the calling task*/
 
     return xTaskCreate(fn, /* The function that implements the task. */
             "MQTTTask", /* Just a text name for the task to aid debugging. */
