@@ -67,7 +67,7 @@ int Harmony_read(Network *n, unsigned char *buffer, int len, int timeout_ms) {
 
     vTaskSetTimeOutState(&xTimeOut); /* Record the time at which this function was entered. */
     do {
-        int rc = TCPIP_TCP_ArrayGet(n->my_socket, buffer + recvLen, len - recvLen);
+        int rc = NET_PRES_SocketRead(n->my_socket, buffer + recvLen, len - recvLen);
         if (rc > 0)
             recvLen += rc;
         else if (rc == 0) {
@@ -92,7 +92,7 @@ int Harmony_write(Network *n, unsigned char *buffer, int len, int timeout_ms) {
 
     vTaskSetTimeOutState(&xTimeOut); /* Record the time at which this function was entered. */
     do {
-        int rc = TCPIP_TCP_ArrayPut(n->my_socket, buffer + sentLen, len - sentLen);
+        int rc = NET_PRES_SocketWrite(n->my_socket, buffer + sentLen, len - sentLen);
         if (rc > 0)
             sentLen += rc;
         else if (rc == 0) {
@@ -122,27 +122,20 @@ int NetworkConnect(Network *n, char *addr, int port) {
         return -1;
 
     SYS_PRINT("Connecting to: %s\r\n",addr);
-    n->my_socket = TCPIP_TCP_ClientOpen(IP_ADDRESS_TYPE_IPV4, port, &remoteAddress);
+    n->my_socket = NET_PRES_SocketOpen(0,
+            NET_PRES_SKT_UNENCRYPTED_STREAM_CLIENT,
+            IP_ADDRESS_TYPE_IPV4,
+            port, 
+            (NET_PRES_ADDRESS *)&remoteAddress,
+            NULL);
     if (n->my_socket == INVALID_SOCKET)
         return INVALID_SOCKET;
-/*
-    if (!TCPIP_TCP_IsConnected(n->my_socket))
-    {
-        SYS_CONSOLE_MESSAGE("Error: TCP/IP not connected\r\n");
-        return -1;
-    }
-    if (TCPIP_TCP_PutIsReady(n->my_socket) == 0)
-    {
-        SYS_CONSOLE_MESSAGE("Error: put not ready\r\n");
-        return -1;
-    }
- * */
     return 0;
 }
 
 void NetworkDisconnect(Network *n) {
-    TCPIP_TCP_Disconnect(n->my_socket);
-    TCPIP_TCP_Close(n->my_socket);
+    NET_PRES_SocketDisconnect(n->my_socket);
+    NET_PRES_SocketClose(n->my_socket);
 }
 
 int ThreadStart(Thread *thread, void (*fn)(void *), void *arg) {
