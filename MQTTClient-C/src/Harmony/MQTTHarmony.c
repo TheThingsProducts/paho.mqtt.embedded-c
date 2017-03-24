@@ -108,7 +108,7 @@ int Harmony_write(Network *n, unsigned char *buffer, int len, int timeout_ms) {
 }
 
 void NetworkInit(Network *n) {
-    n->my_socket = NULL;
+    n->my_socket = INVALID_SOCKET;
     n->mqttread = &Harmony_read;
     n->mqttwrite = &Harmony_write;
 }
@@ -134,8 +134,11 @@ int NetworkConnect(Network *n, char *addr, int port) {
 }
 
 void NetworkDisconnect(Network *n) {
-    NET_PRES_SocketDisconnect(n->my_socket);
-    NET_PRES_SocketClose(n->my_socket);
+    if (n->my_socket != INVALID_SOCKET) {
+        NET_PRES_SocketDisconnect(n->my_socket);
+        NET_PRES_SocketClose(n->my_socket);
+        n->my_socket = INVALID_SOCKET;
+    }
 }
 
 int ThreadStart(Thread *thread, void (*fn)(void *), void *arg) {
@@ -147,16 +150,18 @@ int ThreadStart(Thread *thread, void (*fn)(void *), void *arg) {
             usTaskStackSize, /* The stack size is defined in FreeRTOSIPConfig.h. */
             arg, /* The task parameter, not used in this case. */
             uxTaskPriority, /* The priority assigned to the task is defined in FreeRTOSConfig.h. */
-            &thread->task); /* The task handle is not used. */
+            &thread->task); /* The task handle is used for killing. */
 }
 
 int ThreadJoin(Thread *thread) {
-    vTaskDelete(thread->task);
+    if (thread->task != NULL) {
+        vTaskDelete(thread->task);
+        thread->task = NULL;
+    }
     return SUCCESS;
 }
 
 void ThreadExit() {
-    vTaskDelete(NULL);
 }
 
 void QueueInit(Queue *q) {
@@ -173,6 +178,9 @@ int Dequeue(Queue *q, unsigned short *item, Timer *timer) {
 }
 
 int QueueDestroy(Queue *q) {
-    vQueueDelete(q->queue);
+    if (q->queue != NULL) {
+        vQueueDelete(q->queue);
+        q->queue = NULL;
+    }
     return SUCCESS;
 }
