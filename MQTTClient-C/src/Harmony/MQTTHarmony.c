@@ -142,7 +142,7 @@ void NetworkDisconnect(Network *n) {
 }
 
 int ThreadStart(Thread *thread, void (*fn)(void *), void *arg) {
-    uint16_t usTaskStackSize = (configMINIMAL_STACK_SIZE * 4);
+    uint16_t usTaskStackSize = 4096;
     UBaseType_t uxTaskPriority = 1; // Give lowest prio (busy whyle loop) FIXME: centralize prio config uxTaskPriorityGet(NULL); /* set the priority as the same as the calling task*/
 
     return xTaskCreate(fn, /* The function that implements the task. */
