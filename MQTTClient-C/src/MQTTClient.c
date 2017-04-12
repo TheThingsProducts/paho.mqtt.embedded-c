@@ -96,6 +96,7 @@ void MQTTClientDestroy(MQTTClient *c)
 #if defined(MQTT_TASK)
    ThreadJoin(&c->read_thread);
    QueueDestroy(&c->reply);
+   MutexDestroy(&c->write_mutex);
 #endif
 }
 
