@@ -115,6 +115,10 @@ void NetworkInit(Network *n) {
 
 int NetworkConnect(Network *n, char *addr, int port) {
     IP_MULTI_ADDRESS remoteAddress;
+    
+    if (Network_IsReady(n) == 0)
+        return 0; // Network is already ready (e.g. if a socket with TLS was set up externally)
+    
     if (strlen(addr) == 0)
         return -1;
 
@@ -140,6 +144,39 @@ void NetworkDisconnect(Network *n) {
         n->my_socket = INVALID_SOCKET;
     }
 }
+
+int Network_IsReady(Network *n)
+{
+   if (!NET_PRES_SocketIsConnected(n->my_socket))
+    {
+        return 1;
+    }
+   if (NET_PRES_SocketWasReset(n->my_socket))
+    {
+        return 1;
+    }
+    if (NET_PRES_SocketWriteIsReady(n->my_socket, 1, 1) == 0)
+    {
+        return 1;
+    }  
+   return 0;
+}
+
+int NetworkTLS_Start(Network *n)
+{
+    return NET_PRES_SocketEncryptSocket(n->my_socket) ? 0 : -1;
+}
+
+int NetworkTLS_IsStarting(Network *n)
+{
+    return NET_PRES_SocketIsNegotiatingEncryption(n->my_socket) ? 1 : 0;
+}
+
+int NetworkTLS_IsSecure(Network *n)
+{
+   return NET_PRES_SocketIsSecure(n->my_socket) ? 0 : -1;
+}
+
 
 int ThreadStart(Thread *thread, void (*fn)(void *), void *arg) {
     uint16_t usTaskStackSize = 4096;

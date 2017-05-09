@@ -55,6 +55,10 @@ typedef struct Network {
 void NetworkInit(Network *);
 int NetworkConnect(Network *, char *, int);
 void NetworkDisconnect(Network *);
+int Network_IsReady(Network *n);
+int NetworkTLS_Start(Network *n);
+int NetworkTLS_IsStarting(Network *n);
+int NetworkTLS_IsSecure(Network *n);
 
 typedef struct Queue {
     QueueHandle_t queue;
