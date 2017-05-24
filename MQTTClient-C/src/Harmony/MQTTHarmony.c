@@ -67,17 +67,14 @@ int Harmony_read(Network *n, unsigned char *buffer, int len, int timeout_ms) {
 
     vTaskSetTimeOutState(&xTimeOut); /* Record the time at which this function was entered. */
     do {
-        int rc = NET_PRES_SocketRead(n->my_socket, buffer + recvLen, len - recvLen);
+        if (NET_PRES_SocketWasReset(n->my_socket)) {
+            return 0;
+        }
+        uint16_t rc = NET_PRES_SocketRead(n->my_socket, buffer + recvLen, len - recvLen); // FIXME: Should be a blocking function... now the MQTT thread it busy-while waiting here
         if (rc > 0)
             recvLen += rc;
         else if (rc == 0) {
-          //  SYS_DEBUG(SYS_ERROR_ERROR, "RF");
             recvLen = 0;
-         //   break;
-        }
-        else if (rc < 0) {
-            recvLen = rc;
-            break;
         }
     } while (recvLen < len && xTaskCheckForTimeOut(&xTimeOut, &xTicksToWait) == pdFALSE);
 
