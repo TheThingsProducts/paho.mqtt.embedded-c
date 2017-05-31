@@ -161,7 +161,10 @@ int Network_IsReady(Network *n)
 
 int NetworkTLS_Start(Network *n)
 {
-    return NET_PRES_SocketEncryptSocket(n->my_socket) ? 0 : -1;
+    // (mbed)TLS requires RX and TX buffers to be 16384;
+    return (NET_PRES_SocketOptionsSet(n->my_socket, TCP_OPTION_RX_BUFF, (void*)16384) &&
+    NET_PRES_SocketOptionsSet(n->my_socket, TCP_OPTION_TX_BUFF, (void*)16384) &&
+    NET_PRES_SocketEncryptSocket(n->my_socket)) ? 0 : -1;
 }
 
 int NetworkTLS_IsStarting(Network *n)
