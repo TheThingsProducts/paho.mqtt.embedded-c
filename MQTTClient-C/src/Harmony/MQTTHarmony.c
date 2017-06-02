@@ -131,6 +131,17 @@ int NetworkConnect(Network *n, char *addr, int port) {
             NULL);
     if (n->my_socket == INVALID_SOCKET)
         return INVALID_SOCKET;
+    
+    /*
+     * We increased TCPIP_TCP_CLOSE_WAIT_TIMEOUT to 2 seconds (was 200ms)
+     * To be able to reuse the socket within 2 seconds we
+     * don't want to have graceful close (effectively it will be an abort).
+     */
+    TCP_OPTION_LINGER_DATA LData;
+    NET_PRES_SocketOptionsGet(n->my_socket, TCP_OPTION_LINGER, &LData);
+    LData.gracefulEnable = false;
+    NET_PRES_SocketOptionsSet(n->my_socket, TCP_OPTION_LINGER, &LData);
+    
     return 0;
 }
 
@@ -162,7 +173,7 @@ int Network_IsReady(Network *n)
 int NetworkTLS_Start(Network *n)
 {
     // (mbed)TLS requires RX and TX buffers to be 16384;
-    return (NET_PRES_SocketOptionsSet(n->my_socket, TCP_OPTION_RX_BUFF, (void*)16384) &&
+    return (NET_PRES_SocketOptionsSet(n->my_socket, TCP_OPTION_RX_BUFF, (void*)20000) &&
     NET_PRES_SocketOptionsSet(n->my_socket, TCP_OPTION_TX_BUFF, (void*)16384) &&
     NET_PRES_SocketEncryptSocket(n->my_socket)) ? 0 : -1;
 }
